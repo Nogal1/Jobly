@@ -143,6 +143,145 @@ describe("GET /companies/:handle", function () {
   });
 });
 
+describe("GET /companies", function () {
+  test("ok for anon", async function () {
+    const resp = await request(app).get("/companies");
+    expect(resp.body).toEqual({
+      companies:
+          [
+            {
+              handle: "c1",
+              name: "C1",
+              description: "Desc1",
+              numEmployees: 1,
+              logoUrl: "http://c1.img",
+            },
+            {
+              handle: "c2",
+              name: "C2",
+              description: "Desc2",
+              numEmployees: 2,
+              logoUrl: "http://c2.img",
+            },
+            {
+              handle: "c3",
+              name: "C3",
+              description: "Desc3",
+              numEmployees: 3,
+              logoUrl: "http://c3.img",
+            },
+          ],
+    });
+  });
+
+  test("works: filtering by name", async function () {
+    const resp = await request(app)
+      .get("/companies")
+      .query({ name: "c1" });
+    expect(resp.body).toEqual({
+      companies: [
+        {
+          handle: "c1",
+          name: "C1",
+          description: "Desc1",
+          numEmployees: 1,
+          logoUrl: "http://c1.img",
+        },
+      ],
+    });
+  });
+
+  test("works: filtering by minEmployees", async function () {
+    const resp = await request(app)
+      .get("/companies")
+      .query({ minEmployees: 2 });
+    expect(resp.body).toEqual({
+      companies: [
+        {
+          handle: "c2",
+          name: "C2",
+          description: "Desc2",
+          numEmployees: 2,
+          logoUrl: "http://c2.img",
+        },
+        {
+          handle: "c3",
+          name: "C3",
+          description: "Desc3",
+          numEmployees: 3,
+          logoUrl: "http://c3.img",
+        },
+      ],
+    });
+  });
+
+  test("works: filtering by maxEmployees", async function () {
+    const resp = await request(app)
+      .get("/companies")
+      .query({ maxEmployees: 2 });
+    expect(resp.body).toEqual({
+      companies: [
+        {
+          handle: "c1",
+          name: "C1",
+          description: "Desc1",
+          numEmployees: 1,
+          logoUrl: "http://c1.img",
+        },
+        {
+          handle: "c2",
+          name: "C2",
+          description: "Desc2",
+          numEmployees: 2,
+          logoUrl: "http://c2.img",
+        },
+      ],
+    });
+  });
+
+  test("works: filtering by minEmployees and maxEmployees", async function () {
+    const resp = await request(app)
+      .get("/companies")
+      .query({ minEmployees: 2, maxEmployees: 2 });
+    expect(resp.body).toEqual({
+      companies: [
+        {
+          handle: "c2",
+          name: "C2",
+          description: "Desc2",
+          numEmployees: 2,
+          logoUrl: "http://c2.img",
+        },
+      ],
+    });
+  });
+
+  test("bad request if minEmployees > maxEmployees", async function () {
+    const resp = await request(app)
+      .get("/companies")
+      .query({ minEmployees: 10, maxEmployees: 1 });
+    expect(resp.statusCode).toEqual(400);
+  });
+
+  test("bad request with invalid filter field", async function () {
+    const resp = await request(app)
+      .get("/companies")
+      .query({ invalidField: "invalid" });
+    expect(resp.statusCode).toEqual(400);
+  });
+
+  test("fails: test next() handler", async function () {
+    // there's no normal failure event which will cause this route to fail ---
+    // thus making it hard to test that the error-handler works with it. This
+    // should cause an error, all right :)
+    await db.query("DROP TABLE companies CASCADE");
+    const resp = await request(app)
+        .get("/companies")
+        .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.statusCode).toEqual(500);
+  });
+});
+
 /************************************** PATCH /companies/:handle */
 
 describe("PATCH /companies/:handle", function () {

@@ -52,14 +52,32 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
  * Authorization required: none
  */
 
-router.get("/", async function (req, res, next) {
-  try {
-    const companies = await Company.findAll();
-    return res.json({ companies });
-  } catch (err) {
-    return next(err);
-  }
-});
+  router.get("/", async function (req, res, next) {
+    try {
+      const { name, minEmployees, maxEmployees } = req.query;
+  
+      // Validate that minEmployees is not greater than maxEmployees
+      if (minEmployees !== undefined && maxEmployees !== undefined) {
+        if (parseInt(minEmployees) > parseInt(maxEmployees)) {
+          throw new BadRequestError("minEmployees cannot be greater than maxEmployees");
+        }
+      }
+  
+      // Validate that no inappropriate fields are provided
+      const invalidFields = Object.keys(req.query).filter(
+        field => !['name', 'minEmployees', 'maxEmployees'].includes(field)
+      );
+      if (invalidFields.length > 0) {
+        throw new BadRequestError(`Invalid filter fields: ${invalidFields.join(", ")}`);
+      }
+  
+      const companies = await Company.findAll({ name, minEmployees, maxEmployees });
+      return res.json({ companies });
+    } catch (err) {
+      return next(err);
+    }
+  });
+  
 
 /** GET /[handle]  =>  { company }
  *

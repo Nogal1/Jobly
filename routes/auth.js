@@ -1,3 +1,5 @@
+//routes/auth.js
+
 "use strict";
 
 /** Routes for authentication. */
