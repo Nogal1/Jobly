@@ -8,7 +8,7 @@ const jsonschema = require("jsonschema");
 const express = require("express");
 
 const { BadRequestError } = require("../expressError");
-const { ensureLoggedIn } = require("../middleware/auth");
+const { ensureLoggedIn, ensureAdmin } = require("../middleware/auth");
 const Company = require("../models/company");
 
 const companyNewSchema = require("../schemas/companyNew.json");
@@ -16,17 +16,16 @@ const companyUpdateSchema = require("../schemas/companyUpdate.json");
 
 const router = new express.Router();
 
-
 /** POST / { company } =>  { company }
  *
  * company should be { handle, name, description, numEmployees, logoUrl }
  *
  * Returns { handle, name, description, numEmployees, logoUrl }
  *
- * Authorization required: login
+ * Authorization required: login, admin
  */
 
-router.post("/", ensureLoggedIn, async function (req, res, next) {
+router.post("/", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, companyNewSchema);
     if (!validator.valid) {
@@ -54,23 +53,25 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
 
   router.get("/", async function (req, res, next) {
     try {
+      // Extract query parameters
       const { name, minEmployees, maxEmployees } = req.query;
   
-      // Validate that minEmployees is not greater than maxEmployees
+      // Validate query parameters
       if (minEmployees !== undefined && maxEmployees !== undefined) {
         if (parseInt(minEmployees) > parseInt(maxEmployees)) {
           throw new BadRequestError("minEmployees cannot be greater than maxEmployees");
         }
       }
   
-      // Validate that no inappropriate fields are provided
-      const invalidFields = Object.keys(req.query).filter(
-        field => !['name', 'minEmployees', 'maxEmployees'].includes(field)
-      );
-      if (invalidFields.length > 0) {
-        throw new BadRequestError(`Invalid filter fields: ${invalidFields.join(", ")}`);
+      // Whitelist valid query parameters
+      const validParams = ["name", "minEmployees", "maxEmployees"];
+      for (let key in req.query) {
+        if (!validParams.includes(key)) {
+          throw new BadRequestError(`Invalid query parameter: ${key}`);
+        }
       }
   
+      // Pass query parameters to the model's findAll method
       const companies = await Company.findAll({ name, minEmployees, maxEmployees });
       return res.json({ companies });
     } catch (err) {
@@ -79,7 +80,7 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
   });
   
 
-/** GET /[handle]  =>  { company }
+  /** GET /[handle]  =>  { company }
  *
  *  Company is { handle, name, description, numEmployees, logoUrl, jobs }
  *   where jobs is [{ id, title, salary, equity }, ...]
@@ -96,6 +97,7 @@ router.get("/:handle", async function (req, res, next) {
   }
 });
 
+
 /** PATCH /[handle] { fld1, fld2, ... } => { company }
  *
  * Patches company data.
@@ -104,10 +106,10 @@ router.get("/:handle", async function (req, res, next) {
  *
  * Returns { handle, name, description, numEmployees, logo_url }
  *
- * Authorization required: login
+ * Authorization required: login, admin
  */
 
-router.patch("/:handle", ensureLoggedIn, async function (req, res, next) {
+router.patch("/:handle", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, companyUpdateSchema);
     if (!validator.valid) {
@@ -124,10 +126,10 @@ router.patch("/:handle", ensureLoggedIn, async function (req, res, next) {
 
 /** DELETE /[handle]  =>  { deleted: handle }
  *
- * Authorization: login
+ * Authorization required: login, admin
  */
 
-router.delete("/:handle", ensureLoggedIn, async function (req, res, next) {
+router.delete("/:handle", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
   try {
     await Company.remove(req.params.handle);
     return res.json({ deleted: req.params.handle });
@@ -135,6 +137,5 @@ router.delete("/:handle", ensureLoggedIn, async function (req, res, next) {
     return next(err);
   }
 });
-
 
 module.exports = router;

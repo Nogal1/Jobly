@@ -14,7 +14,10 @@ function createToken(user) {
     isAdmin: user.isAdmin || false,
   };
 
-  return jwt.sign(payload, SECRET_KEY);
+  const token = jwt.sign(payload, SECRET_KEY);
+  console.log("Generated Token:", token); // Debug
+  return token;
 }
+
 
 module.exports = { createToken };
