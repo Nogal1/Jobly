@@ -18,7 +18,7 @@ async function commonBeforeAll() {
     description: "Desc1",
     logoUrl: "http://c1.img",
   });
-  
+
   await Company.create({
     handle: "c2",
     name: "C2",
@@ -41,6 +41,15 @@ async function commonBeforeAll() {
     lastName: "U1L",
     email: "user1@user.com",
     password: "password1",
+    isAdmin: false,
+  });
+
+  await User.register({
+    username: "u2",
+    firstName: "U2F",
+    lastName: "U2L",
+    email: "user2@user.com",
+    password: "password2",
     isAdmin: false,
   });
   
