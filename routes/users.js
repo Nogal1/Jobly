@@ -11,8 +11,39 @@ const User = require("../models/user");
 const { createToken } = require("../helpers/tokens");
 const userNewSchema = require("../schemas/userNew.json");
 const userUpdateSchema = require("../schemas/userUpdate.json");
+const db = require("../db");
+
 
 const router = express.Router();
+
+/** POST /[username]/jobs/[id]  => { applied: jobId }
+ *
+ * Allows the user to apply for a job.
+ *
+ * Authorization required: same user-as-:username or admin
+ **/
+router.post("/:username/jobs/:id", ensureCorrectUserOrAdmin, async function (req, res, next) {
+  try {
+    const { username, id } = req.params;
+
+    // Check if the application already exists
+    const existingApplication = await db.query(
+      `SELECT 1 FROM applications WHERE username = $1 AND job_id = $2`,
+      [username, id]
+    );
+
+    if (existingApplication.rows.length > 0) {
+      // If it exists, return the same response as if the application was just created
+      return res.json({ applied: id });
+    }
+
+    await User.applyToJob(username, id);
+    return res.json({ applied: id });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 
 
 /** POST / { user }  => { user, token }
@@ -69,7 +100,7 @@ router.get("/", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
  * Authorization required: login
  **/
 
-router.get("/:username", ensureLoggedIn, async function (req, res, next) {
+router.get("/:username", ensureLoggedIn, ensureCorrectUserOrAdmin,  async function (req, res, next) {
   try {
     const user = await User.get(req.params.username);
     return res.json({ user });

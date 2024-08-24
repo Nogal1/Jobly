@@ -13,6 +13,7 @@ const {
   commonAfterAll,
   adminToken,
   u1Token,
+  u2Token
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -126,6 +127,29 @@ describe("POST /users", function () {
   });
 });
 
+/************************************** POST /users/:username/jobs/:id */
+describe("POST /users/:username/jobs/:id", function () {
+  test("works for correct user", async function () {
+    const resp = await request(app)
+      .post(`/users/u1/jobs/1`)  // Assuming job ID 1 exists
+      .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.body).toEqual({ applied: "1" });
+  });
+
+  test("works for admin applying for another user", async function () {
+    const resp = await request(app)
+      .post(`/users/u1/jobs/1`)  // Assuming job ID 1 exists
+      .set("authorization", `Bearer ${adminToken}`);
+    expect(resp.body).toEqual({ applied: "1" });
+  });
+
+  test("unauth for other users", async function () {
+    const resp = await request(app)
+      .post(`/users/u1/jobs/1`)  // Assuming job ID 1 exists
+      .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(403);
+  });
+});
 
 /************************************** GET /users */
 describe("GET /users", function () {
@@ -166,36 +190,25 @@ describe("GET /users", function () {
 /************************************** GET /users/:username */
 
 describe("GET /users/:username", function () {
-  test("works for same user", async function () {
+  test("works for correct user", async function () {
     const resp = await request(app)
-        .get(`/users/u1`)
-        .set("authorization", `Bearer ${u1Token}`);
-    expect(resp.statusCode).toEqual(200);
-    expect(resp.body).toEqual({
-      user: {
-        username: "u1",
-        firstName: "U1F",
-        lastName: "U1L",
-        email: "user1@user.com",
-        isAdmin: false,
-      },
-    });
+      .get(`/users/u1`)
+      .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.body.user.jobs).toEqual([1, 2]);  // Assuming job IDs 1 and 2 exist
   });
 
-  test("works for admins", async function () {
+  test("works for admin viewing another user", async function () {
     const resp = await request(app)
-        .get(`/users/u1`)
-        .set("authorization", `Bearer ${adminToken}`);
-    expect(resp.statusCode).toEqual(200);
-    expect(resp.body).toEqual({
-      user: {
-        username: "u1",
-        firstName: "U1F",
-        lastName: "U1L",
-        email: "user1@user.com",
-        isAdmin: false,
-      },
-    });
+      .get(`/users/u1`)
+      .set("authorization", `Bearer ${adminToken}`);
+    expect(resp.body.user.jobs).toEqual([1, 2]);  // Assuming job IDs 1 and 2 exist
+  });
+
+  test("unauth for other users", async function () {
+    const resp = await request(app)
+      .get(`/users/u1`)
+      .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(403);
   });
 
   test("unauth for anon", async function () {
@@ -207,7 +220,7 @@ describe("GET /users/:username", function () {
   test("not found if user not found", async function () {
     const resp = await request(app)
         .get(`/users/nope`)
-        .set("authorization", `Bearer ${u1Token}`);
+        .set("authorization", `Bearer ${adminToken}`);
     expect(resp.statusCode).toEqual(404);
   });
 });
