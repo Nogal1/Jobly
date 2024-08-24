@@ -3,14 +3,18 @@
 const db = require("../db.js");
 const User = require("../models/user");
 const Company = require("../models/company");
+const Job = require("../models/job"); // Import Job model
 const { createToken } = require("../helpers/tokens");
+
 
 async function commonBeforeAll() {
   // noinspection SqlWithoutWhere
   await db.query("DELETE FROM users");
-  // noinspection SqlWithoutWhere
   await db.query("DELETE FROM companies");
-
+  await db.query("DELETE FROM jobs"); // Clear jobs table
+  await db.query("SELECT setval(pg_get_serial_sequence('jobs', 'id'), 1, false)");
+  
+  // Create companies
   await Company.create({
     handle: "c1",
     name: "C1",
@@ -35,6 +39,15 @@ async function commonBeforeAll() {
     logoUrl: "http://c3.img",
   });
 
+  await Company.create({
+    handle: "c4",
+    name: "C4",
+    numEmployees: 1,
+    description: "Desc4",
+    logoUrl: "http://c4.img",
+  });
+
+  // Create users
   await User.register({
     username: "u1",
     firstName: "U1F",
@@ -52,7 +65,7 @@ async function commonBeforeAll() {
     password: "password2",
     isAdmin: false,
   });
-  
+
   await User.register({
     username: "admin",
     firstName: "AdminF",
@@ -61,6 +74,31 @@ async function commonBeforeAll() {
     password: "password",
     isAdmin: true, // This user is an admin
   });
+
+ // Create jobs and store their IDs
+  await Job.create({
+  title: "Job1",
+  salary: 50000,
+  equity: "0.05",
+  companyHandle: "c1",
+});
+
+
+  await Job.create({
+  title: "Job2",
+  salary: 60000,
+  equity: "0.07",
+  companyHandle: "c2",
+});
+
+
+  await Job.create({
+  title: "Job3",
+  salary: 70000,
+  equity: "0.1",
+  companyHandle: "c3",
+});
+
 }
 
 async function commonBeforeEach() {

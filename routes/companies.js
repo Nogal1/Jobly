@@ -98,6 +98,7 @@ router.get("/:handle", async function (req, res, next) {
 });
 
 
+
 /** PATCH /[handle] { fld1, fld2, ... } => { company }
  *
  * Patches company data.
